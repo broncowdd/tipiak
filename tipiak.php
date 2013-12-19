@@ -172,8 +172,8 @@
 	function try_autocomplete_relatives_url($url){
 		if ($url!=''){
 			$url=fuck_slashes($url);
-
 			$data_url=parse_url($url);
+			if (!isset($data_url['path'])){return false;}
 			if (isset($data_url['scheme'])&&$data_url['scheme']!=''){
 				return $url;
 			}else{
@@ -244,7 +244,7 @@ if (URL!='None'){
 ?>
 <footer>
 	<span style="float:left">Bookmarklets: <?php makebookmarklets();?> </span>
-	<span style="float:right"><?php echo $version;?> Cod&#233;e &#224; la <em>va-comme-jte-pousse</em> par <a href="http://warriordudimanche.net">Bronco</a></span>
+	<span style="float:right"><?php echo $version;?> Cod&#233;e &#224; la <em>va-comme-jte-pousse</em> par <a href="http://www.warriordudimanche.net/article217/tipiak-recuperer-les-ressources-d-une-page-web">Bronco</a></span>
 	<div style="clear:both"></div>
 </footer>
 <script>
