@@ -10,7 +10,7 @@
 			$basetempfilename='temp/'.basename($file);
 			file_put_contents($basetempfilename,$temp);
 			$tozip[]=$basetempfilename;
-		}aff($tozip);
+		}
 		create_zip($tozip, $filename, true);  
 		header('location: '.$filename);
 	}else{
