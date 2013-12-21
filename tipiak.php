@@ -1,5 +1,6 @@
 <?php
-	if (!is_dir('temp')){mkdir('temp');file_put_contents('temp/index.html', '');}
+    if (!is_dir('temp')){mkdir('temp');}
+    if (!file_exists('temp/index.html')) {file_put_contents('temp/index.html', '');}
 	// handle the post packing of files
 	if ($_POST&&count($_POST)>1){
 		$post=array_map("strip_tags",$_POST);
