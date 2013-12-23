@@ -1,6 +1,7 @@
 <?php
     if (!is_dir('temp')){mkdir('temp');}
     if (!file_exists('temp/index.html')) {file_put_contents('temp/index.html', '');}
+    if (!file_exists('temp/.htaccess')) {file_put_contents('temp/.htaccess', "php_flag engine off\nForceType text/plain");}
 
 	// handle the post packing of files
 	if ($_POST&&count($_POST)>1){
