@@ -1,6 +1,7 @@
 <?php
     if (!is_dir('temp')){mkdir('temp');}
     if (!file_exists('temp/index.html')) {file_put_contents('temp/index.html', '');}
+
 	// handle the post packing of files
 	if ($_POST&&count($_POST)>1){
 		$post=array_map("strip_tags",$_POST);
@@ -9,14 +10,15 @@
 		foreach($post as $file){
 			$temp=file_curl_contents($file);
 			$basetempfilename='temp/'.basename($file);
-			file_put_contents($basetempfilename,$temp);
-			$tozip[]=$basetempfilename;
+			$basetempfilename_secure='temp/'.uniqid();
+			file_put_contents($basetempfilename_secure,$temp);
+			$tozip[]=array('basetempfilename'=>$basetempfilename, 'basetempfilename_secure'=>$basetempfilename_secure);
 		}
 		create_zip($tozip, $filename, true);  
 		header('location: '.$filename);
 	}else{
 		//delete all temp files
-		$temp=glob('temp/*.*');
+		$temp=glob('temp/*');
 		foreach ($temp as $file){if (basename($file)!='index.html'){unlink($file);}}
 	}
 
@@ -191,8 +193,8 @@
 	    $valid_files = array();  
 	    if(is_array($files)) {  
 	        foreach($files as $file) {  
-	            if(file_exists($file)) {  
-	                $valid_files[] = $file;  
+	            if(file_exists($file['basetempfilename_secure'])) {  
+	                $valid_files[] = $file;
 	            }  
 	        }  
 	    }  
@@ -202,9 +204,12 @@
 	            return false;  
 	        }  
 	        foreach($valid_files as $file) {  
-	            $zip->addFile($file,$file);  
+                $zip->addFile($file['basetempfilename_secure'],$file['basetempfilename']);  
 	        }  	        
 	        $zip->close();  	          
+            foreach($valid_files as $file) {
+                unlink($file['basetempfilename_secure']);
+            }
 	        return file_exists($destination);  
 	    }else{ return false; }  
 	}
