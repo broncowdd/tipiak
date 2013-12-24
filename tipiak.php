@@ -1,33 +1,31 @@
 <?php
+	// special thanks to Phyks (https://github.com/Phyks) for his help to enhance security ;-)
 	if (!is_dir('temp')){mkdir('temp');file_put_contents('temp/index.html', '');}
+	if (!file_exists('temp/index.html')) {file_put_contents('temp/index.html', '');}
+    if (!file_exists('temp/.htaccess')) {file_put_contents('temp/.htaccess', "php_flag engine off\nForceType text/plain\n\n<FilesMatch \"\.zip$\">\n\tForceType application/zip\n</FilesMatch>");}
+
 	// handle the post packing of files
 	if ($_POST&&count($_POST)>1){
-		set_time_limit (60);
 		$post=array_map("strip_tags",$_POST);
 		$filename='temp/'.$post['zipname'].'.zip';unset($post['zipname']);
 		$tozip=array();
 		foreach($post as $file){
 			$temp=file_curl_contents($file);
 			$basetempfilename='temp/'.basename($file);
-			$extension=pathinfo($file,PATHINFO_EXTENSION);
-			if (strtolower($extension)=='php'){str_ireplace('.php','.SECURED_PHP_FILE',$basetempfilename);}
-			file_put_contents($basetempfilename,$temp);
-			$tozip[]=$basetempfilename;
+			$basetempfilename_secure='temp/'.uniqid();
+			file_put_contents($basetempfilename_secure,$temp);
+			$tozip[]=array('basetempfilename'=>$basetempfilename, 'basetempfilename_secure'=>$basetempfilename_secure);
 		}
 		create_zip($tozip, $filename, true);  
-		//once zip created, delete all temp files (avoid hacking use) except zip !
-		$temp=glob('temp/*.*');
-		foreach ($temp as $file){if (basename($file)!='index.html'&&basename($file)!=basename($filename)){unlink($file);}}
-
 		header('location: '.$filename);
 	}else{
-		// kill all remaining temp files (including zip)
-		$temp=glob('temp/*.*');
+		//delete all temp files
+		$temp=glob('temp/*');
 		foreach ($temp as $file){if (basename($file)!='index.html'){unlink($file);}}
 	}
 
 	// INIT
-	$version='v1.4';
+	$version='v1.4b';
 	$me='http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'];
 	$bookmarklet="<a class=\"btn\" href=\"javascript:javascript:(function(){var url = location.href;window.open('".$me."?p=' + encodeURIComponent(url)+'&ext=#ext','_blank','menubar=yes,height=600,width=1000,toolbar=yes,scrollbars=yes,status=yes');})();\" >#nom</a>";
 	$icon='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAxhpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDM0MiwgMjAxMC8wMS8xMC0xODowNjo0MyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDowRTY2OUM2NTY2NzgxMUUzQkE3QkJFQjk5OTU5OEYyMSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDowRTY2OUM2NjY2NzgxMUUzQkE3QkJFQjk5OTU5OEYyMSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjBFNjY5QzYzNjY3ODExRTNCQTdCQkVCOTk5NTk4RjIxIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjBFNjY5QzY0NjY3ODExRTNCQTdCQkVCOTk5NTk4RjIxIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+lLLB+gAACNpJREFUeNq8WnlsTWkUP60qpbai9tpD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';
@@ -207,8 +205,8 @@
 	    $valid_files = array();  
 	    if(is_array($files)) {  
 	        foreach($files as $file) {  
-	            if(file_exists($file)) {  
-	                $valid_files[] = $file;  
+	            if(file_exists($file['basetempfilename_secure'])) {  
+	                $valid_files[] = $file;
 	            }  
 	        }  
 	    }  
@@ -218,9 +216,12 @@
 	            return false;  
 	        }  
 	        foreach($valid_files as $file) {  
-	            $zip->addFile($file,$file);  
+                $zip->addFile($file['basetempfilename_secure'],$file['basetempfilename']);  
 	        }  	        
 	        $zip->close();  	          
+            foreach($valid_files as $file) {
+                unlink($file['basetempfilename_secure']);
+            }
 	        return file_exists($destination);  
 	    }else{ return false; }  
 	}
