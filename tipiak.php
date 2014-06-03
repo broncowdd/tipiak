@@ -1,31 +1,33 @@
 <?php
-	// special thanks to Phyks (https://github.com/Phyks) for his help to enhance security ;-)
 	if (!is_dir('temp')){mkdir('temp');file_put_contents('temp/index.html', '');}
-	if (!file_exists('temp/index.html')) {file_put_contents('temp/index.html', '');}
-    if (!file_exists('temp/.htaccess')) {file_put_contents('temp/.htaccess', "php_flag engine off\nForceType text/plain\n\n<FilesMatch \"\.zip$\">\n\tForceType application/zip\n</FilesMatch>");}
-
 	// handle the post packing of files
 	if ($_POST&&count($_POST)>1){
+		set_time_limit (60);
 		$post=array_map("strip_tags",$_POST);
 		$filename='temp/'.$post['zipname'].'.zip';unset($post['zipname']);
 		$tozip=array();
 		foreach($post as $file){
 			$temp=file_curl_contents($file);
 			$basetempfilename='temp/'.basename($file);
-			$basetempfilename_secure='temp/'.uniqid();
-			file_put_contents($basetempfilename_secure,$temp);
-			$tozip[]=array('basetempfilename'=>$basetempfilename, 'basetempfilename_secure'=>$basetempfilename_secure);
+			$extension=pathinfo($file,PATHINFO_EXTENSION);
+			if (strtolower($extension)=='php'){str_ireplace('.php','.SECURED_PHP_FILE',$basetempfilename);}
+			file_put_contents($basetempfilename,$temp);
+			$tozip[]=$basetempfilename;
 		}
 		create_zip($tozip, $filename, true);  
+		//once zip created, delete all temp files (avoid hacking use) except zip !
+		$temp=glob('temp/*.*');
+		foreach ($temp as $file){if (basename($file)!='index.html'&&basename($file)!=basename($filename)){unlink($file);}}
+
 		header('location: '.$filename);
 	}else{
-		//delete all temp files
-		$temp=glob('temp/*');
+		// kill all remaining temp files (including zip)
+		$temp=glob('temp/*.*');
 		foreach ($temp as $file){if (basename($file)!='index.html'){unlink($file);}}
 	}
 
 	// INIT
-	$version='v1.4b';
+	$version='v1.5';
 	$me='http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'];
 	$bookmarklet="<a class=\"btn\" href=\"javascript:javascript:(function(){var url = location.href;window.open('".$me."?p=' + encodeURIComponent(url)+'&ext=#ext','_blank','menubar=yes,height=600,width=1000,toolbar=yes,scrollbars=yes,status=yes');})();\" >#nom</a>";
 	$icon='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAxhpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDM0MiwgMjAxMC8wMS8xMC0xODowNjo0MyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDowRTY2OUM2NTY2NzgxMUUzQkE3QkJFQjk5OTU5OEYyMSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDowRTY2OUM2NjY2NzgxMUUzQkE3QkJFQjk5OTU5OEYyMSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjBFNjY5QzYzNjY3ODExRTNCQTdCQkVCOTk5NTk4RjIxIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjBFNjY5QzY0NjY3ODExRTNCQTdCQkVCOTk5NTk4RjIxIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+lLLB+gAACNpJREFUeNq8WnlsTWkUP60qpbai9tpD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';
@@ -68,7 +70,8 @@
 		li:hover{background-color:#DDD;}
 		li label{border-radius:3px;cursor:pointer;padding:4px;}
 		input[type=checkbox]:checked+label{background-color:rgba(0,0,0,0.2);box-shadow:inset 0 1px 2px black;text-shadow:0 1px 1px white;}
-		li a{display:inline-block;width:64px;text-align:center;font-family:courier;text-decoration:none;border-radius:2px; border:1px solid rgba(0,0,0,0.2);background-color:#EEE;color:#555;text-shadow:0 1px 1px white;box-shadow:0 1px 2px #444;padding:3px;}
+		li a {display:inline-block;text-decoration:none;text-shadow:0 1px 1px white;padding:3px;color:black;}
+		li a.button{width:64px;font-family:courier;text-align:center;border-radius:2px; border:1px solid rgba(0,0,0,0.2);background-color:#EEE;color:#555;box-shadow:0 1px 2px #444;}
 
 		li.css a{background-color:#9F0;color:#250;box-shadow:0 1px 2px #250;}
 		li.htm a,li.html a{background-color:#BF0;color:#450;box-shadow:0 1px 2px #450;}
@@ -81,6 +84,7 @@
 		li.jpg a, li.jpeg a{background-color:#af0;color:#450;box-shadow:0 1px 2px #450;}
 		li.pdf a{background-color:darkred;color:red;box-shadow:0 1px 2px darkred;}
 		li.mp4 a,li.flv a{background-color:blue;color:lightblue;box-shadow:0 1px 2px black;}
+		li a.youtube {background-color:red;color:white;box-shadow:0 1px 2px maroon;text-shadow:0 0 1px pink;}
 		li.mp3 a,li.ogg a{background-color:orange;color:maroon;box-shadow:0 1px 2px maroon;}
 		li.zip a,li.rar a, li.tar a,li.gz a{background-color:#555;color:#eee;box-shadow:0 1px 2px black;}
 		li.xml a,li.txt a, li.ini a,li.json a{background-color:#aaa;color:#444;text-shadow:0 1px 1px white;box-shadow:0 1px 2px #333;}
@@ -161,7 +165,7 @@
 		curl_setopt($ch, CURLOPT_URL, $url);
 		if (!ini_get("safe_mode") && !ini_get('open_basedir') ) {curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);}
 		curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
-		if ($pretend){curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:19.0) Gecko/20100101 Firefox/19.0');}    
+		if ($pretend){curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:19.0) Gecko/20100101 Firefox/29.0');}    
 		//curl_setopt($ch, CURLOPT_REFERER, random_referer());// notez le referer "custom"
 		$data = curl_exec($ch);
 		$response_headers = curl_getinfo($ch);
@@ -183,6 +187,25 @@
 		     curl_close($ch);
 		     if ($size!=-1){return $size;}else{return false;}
 		}
+	function get_video_infos($url=null){
+		// returns an array with all the youtube video's informations (available qualities/urls/format...)
+		if (!empty($url)){
+			if ($contenu=file_curl_contents($url)){
+				preg_match_all('#"url_encoded_fmt_stream_map": "(.*?)"#', $contenu, $resultats);
+				preg_match_all('#<title>(.*?)</title>#', $contenu, $title);
+				$c=0;
+				$p=array('title'=>$title[1][0]);
+				$params=explode('\u0026',$resultats[1][0]); 
+				foreach ($params as $param){
+					$temp=explode('=',$param);
+					if (isset($p[$c][$temp[0]])){$c++;}
+					$p[$c][$temp[0]]=urldecode($temp[1]);
+				}
+				return $p;
+			}else{return false;}
+		}else{return false;}
+
+	}
 	function fuck_slashes($string){return preg_replace('#(?<=[^:])//#','/',stripslashes($string));}
 	function try_autocomplete_relatives_url($url){
 		if ($url!=''){
@@ -205,8 +228,8 @@
 	    $valid_files = array();  
 	    if(is_array($files)) {  
 	        foreach($files as $file) {  
-	            if(file_exists($file['basetempfilename_secure'])) {  
-	                $valid_files[] = $file;
+	            if(file_exists($file)) {  
+	                $valid_files[] = $file;  
 	            }  
 	        }  
 	    }  
@@ -216,12 +239,9 @@
 	            return false;  
 	        }  
 	        foreach($valid_files as $file) {  
-                $zip->addFile($file['basetempfilename_secure'],$file['basetempfilename']);  
+	            $zip->addFile($file,$file);  
 	        }  	        
 	        $zip->close();  	          
-            foreach($valid_files as $file) {
-                unlink($file['basetempfilename_secure']);
-            }
 	        return file_exists($destination);  
 	    }else{ return false; }  
 	}
@@ -235,8 +255,30 @@
 if (URL!='None'){
 	echo '<form action="#" method="POST" name="tipiak"><input type="hidden" name="zipname" value="'.filterchars(URL).'"/>';
 	if ($page=file_curl_contents(URL)){
-		//TODO: tester les iframes et charger puis ajouter leur contenu à la suite de $page
-		if (preg_match_all($reg,$page,$results)){
+		if (stripos(URL,'www.youtube.com/watch?v=')!==false){
+			// GRAB YOUTUBE DIRECT VIDEOS LINKS
+
+			if ($info=get_video_infos(URL)){
+				
+				$title=strip_tags($info['title']);
+				unset($info['title']);
+				echo'<h1>'.count($info).' versions available for this video. </h1>';
+
+				foreach($info as $key=>$video){
+					if ($length=curl_get_file_size($video['url'])){							
+						$length= '( '.round(($length/1024),2).' ko)';
+					}else{$length='(no size)';}
+
+					if (empty($video['quality'])){$video['quality']='no quality given';}
+					if (empty($video['type'])){$video['type']='no type given';}
+
+					echo '<li><a class="youtube button" href="'.$video['url'].'" title="Download" download="'.$title.'">YTB</a> <a href="'.$video['url'].'" title="Download" download="'.$title.'">'.$title.'  <em>'.$length.'</em> ('.strip_tags($video['quality']).' / '.strip_tags($video['type']).')</a></li>
+							';
+				}
+			}else{echo '<p class="error">no tipiakable data in this video link</p>';}
+
+		}else if (preg_match_all($reg,$page,$results)){
+			// GRAB PAGE CONTENT DATA
 			$results=array_unique($results[0]);
 			echo'<h1>'.count($results).' files tipiakable.<input type="button" onclick="selunselall(true)" value="&#10004;" title="select all"/><input type="button" onclick="selunselall(false)" value="&#10008;" title="unselect all"/></h1>';
 	
@@ -249,13 +291,13 @@ if (URL!='None'){
 							$length= '( '.round(($length/1024),2).' ko)';
 						}else{$length='(no size)';}
 						if (!empty($extension)){
-							echo '<li class="'.$extension.'"><a href="'.$val.'" title="Download" download="'.strip_tags(basename($val)).'">'.$extension.'</a> - <input type="checkbox" name="file'.$key.'" id="file'.$key.'" value="'.$val.'"/><label title="select to make a zip" for="file'.$key.'">'.$val.' <em>'.$length.'</em></label></li>
+							echo '<li class="'.$extension.'"><a  class="button"  href="'.$val.'" title="Download" download="'.strip_tags(basename($val)).'">'.$extension.'</a> - <input type="checkbox" name="file'.$key.'" id="file'.$key.'" value="'.$val.'"/><label title="select to make a zip" for="file'.$key.'">'.$val.' <em>'.$length.'</em></label></li>
 							';
 						}
 					//}
 				}
-			}
-
+			}	
+		
 		}else{echo '<p class="error">no tipiakable data</p>';}
 	}else{echo '<p class="error">no file access</p>';}
 	echo '<hr/><input class="tipiakselected" type="submit" value="Tipiak all selected"/></form>';
